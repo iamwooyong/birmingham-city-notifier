@@ -104,6 +104,38 @@ class FootballAPIClient:
         sorted_matches = sorted(matches, key=lambda x: x.get("utcDate", ""), reverse=True)
         return sorted_matches[:limit]
 
+    def get_team_standing(self) -> Optional[Dict]:
+        """
+        Get Birmingham City's current league standing
+
+        Returns:
+            Dictionary with standing information or None if not found
+        """
+        # Championship is competition ID 2016 in football-data.org
+        data = self._make_request("competitions/2016/standings")
+
+        if not data or "standings" not in data:
+            return None
+
+        # Find Birmingham City in the standings
+        for standing_type in data["standings"]:
+            if standing_type.get("type") == "TOTAL":
+                for team in standing_type.get("table", []):
+                    if team.get("team", {}).get("id") == self.team_id:
+                        return {
+                            "position": team.get("position", 0),
+                            "played": team.get("playedGames", 0),
+                            "won": team.get("won", 0),
+                            "draw": team.get("draw", 0),
+                            "lost": team.get("lost", 0),
+                            "points": team.get("points", 0),
+                            "goals_for": team.get("goalsFor", 0),
+                            "goals_against": team.get("goalsAgainst", 0),
+                            "goal_difference": team.get("goalDifference", 0)
+                        }
+
+        return None
+
     def get_upcoming_future_matches(self, limit: int = 3) -> List[Dict]:
         """
         Get upcoming future matches (up to limit count)

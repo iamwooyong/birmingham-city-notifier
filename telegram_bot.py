@@ -50,6 +50,7 @@ class TelegramNotifier:
         upcoming_matches: List[Dict],
         future_matches: List[Dict],
         recent_results: List[Dict],
+        standing: Dict = None,
         team_name: str = "버밍엄 시티 FC"
     ) -> str:
         """
@@ -59,6 +60,7 @@ class TelegramNotifier:
             upcoming_matches: List of upcoming matches (today/tomorrow)
             future_matches: List of future matches (next 3 matches)
             recent_results: List of recent match results (last 5 games)
+            standing: Team standing information
             team_name: Team name to display
 
         Returns:
@@ -66,6 +68,20 @@ class TelegramNotifier:
         """
         today = datetime.now().strftime("%Y-%m-%d")
         message_parts = [f"⚽ <b>{team_name} 경기 정보</b> ({today})\n"]
+
+        # Add league standing if available
+        if standing:
+            position = standing.get("position", 0)
+            played = standing.get("played", 0)
+            won = standing.get("won", 0)
+            draw = standing.get("draw", 0)
+            lost = standing.get("lost", 0)
+            points = standing.get("points", 0)
+            goal_diff = standing.get("goal_difference", 0)
+            gd_sign = "+" if goal_diff > 0 else ""
+
+            message_parts.append(f"📊 <b>리그 순위:</b> {position}위 | {played}경기 {won}승 {draw}무 {lost}패 | {points}점 (득실차 {gd_sign}{goal_diff})")
+            message_parts.append("")
 
         # 1. Upcoming matches (today/tomorrow)
         message_parts.append("📅 <b>오늘/내일 경기:</b>")
@@ -127,18 +143,28 @@ class TelegramNotifier:
                 is_away = "버밍엄" in away or "Birmingham" in away
 
                 if is_home:
-                    result_emoji = "✅" if home_score > away_score else ("❌" if home_score < away_score else "🟰")
+                    if home_score > away_score:
+                        result_text = "승 ✅"
+                    elif home_score < away_score:
+                        result_text = "패 ❌"
+                    else:
+                        result_text = "무 🟰"
                 elif is_away:
-                    result_emoji = "✅" if away_score > home_score else ("❌" if away_score < home_score else "🟰")
+                    if away_score > home_score:
+                        result_text = "승 ✅"
+                    elif away_score < home_score:
+                        result_text = "패 ❌"
+                    else:
+                        result_text = "무 🟰"
                 else:
-                    result_emoji = ""
+                    result_text = ""
 
                 # Format time as mm-dd HH:MM (remove year)
                 korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
                 uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
-                message_parts.append(f"{home} {home_score} - {away_score} {away} {result_emoji}")
+                message_parts.append(f"{home} {home_score} - {away_score} {away} {result_text}")
                 message_parts.append("")
 
         # If absolutely no matches at all
@@ -152,7 +178,8 @@ class TelegramNotifier:
         self,
         upcoming_matches: List[Dict],
         future_matches: List[Dict],
-        recent_results: List[Dict]
+        recent_results: List[Dict],
+        standing: Dict = None
     ) -> bool:
         """
         Synchronous wrapper for sending match notifications
@@ -161,6 +188,7 @@ class TelegramNotifier:
             upcoming_matches: List of upcoming matches
             future_matches: List of future matches (next 3)
             recent_results: List of recent results
+            standing: Team standing information
 
         Returns:
             True if notification was sent successfully
@@ -168,7 +196,8 @@ class TelegramNotifier:
         message = self.format_match_notification(
             upcoming_matches,
             future_matches,
-            recent_results
+            recent_results,
+            standing
         )
 
         # Run async function in sync context

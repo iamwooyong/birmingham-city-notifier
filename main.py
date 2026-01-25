@@ -42,6 +42,11 @@ def main():
     print("Fetching match data from football-data.org...")
 
     try:
+        # Get team standing
+        standing = api_client.get_team_standing()
+        if standing:
+            print(f"Current standing: {standing['position']}위 (승{standing['won']} 무{standing['draw']} 패{standing['lost']}, {standing['points']}점)")
+
         # Get upcoming matches (today and tomorrow)
         upcoming_raw = api_client.get_upcoming_matches(days_ahead=2)
         upcoming_matches = [api_client.format_match_info(m) for m in upcoming_raw]
@@ -75,7 +80,8 @@ def main():
         success = telegram.send_notification_sync(
             upcoming_matches,
             future_matches,
-            recent_results
+            recent_results,
+            standing
         )
 
         if success:
