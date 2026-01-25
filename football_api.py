@@ -117,12 +117,18 @@ class FootballAPIClient:
         if not data or "standings" not in data:
             return None
 
-        # Find Birmingham City in the standings
+        # Find Birmingham City and 6th place team in the standings
+        birmingham_standing = None
+        sixth_place_points = 0
+
         for standing_type in data["standings"]:
             if standing_type.get("type") == "TOTAL":
-                for team in standing_type.get("table", []):
+                table = standing_type.get("table", [])
+
+                # Find Birmingham City
+                for team in table:
                     if team.get("team", {}).get("id") == self.team_id:
-                        return {
+                        birmingham_standing = {
                             "position": team.get("position", 0),
                             "played": team.get("playedGames", 0),
                             "won": team.get("won", 0),
@@ -134,7 +140,29 @@ class FootballAPIClient:
                             "goal_difference": team.get("goalDifference", 0)
                         }
 
-        return None
+                # Find 6th place team points (playoff position)
+                for team in table:
+                    if team.get("position") == 6:
+                        sixth_place_points = team.get("points", 0)
+                        break
+
+                break
+
+        if birmingham_standing:
+            # Calculate points needed to reach playoff position (6th place)
+            current_points = birmingham_standing["points"]
+            points_to_playoff = sixth_place_points - current_points
+
+            # If already in playoff position or above, points_to_playoff will be 0 or negative
+            if points_to_playoff < 0:
+                points_to_playoff = 0
+            elif points_to_playoff == 0 and birmingham_standing["position"] > 6:
+                points_to_playoff = 1  # Need at least 1 more point if tied but outside playoff
+
+            birmingham_standing["playoff_points"] = sixth_place_points
+            birmingham_standing["points_to_playoff"] = points_to_playoff
+
+        return birmingham_standing
 
     def get_upcoming_future_matches(self, limit: int = 3) -> List[Dict]:
         """

@@ -79,9 +79,17 @@ class TelegramNotifier:
             points = standing.get("points", 0)
             goal_diff = standing.get("goal_difference", 0)
             gd_sign = "+" if goal_diff > 0 else ""
-            remaining_games = 46 - played  # Championship has 46 games total
+            total_games = 46  # Championship has 46 games total
+            remaining_games = total_games - played
+            points_to_playoff = standing.get("points_to_playoff", 0)
 
-            message_parts.append(f"📊 <b>리그 순위:</b> {position}위 | {played}경기 {won}승 {draw}무 {lost}패 | {points}점 (득실차 {gd_sign}{goal_diff}) | 남은경기 {remaining_games}경기")
+            # Format playoff message
+            if position <= 6:
+                playoff_msg = "플레이오프권 내"
+            else:
+                playoff_msg = f"PO(6위)까지 {points_to_playoff}점 필요"
+
+            message_parts.append(f"📊 <b>리그 순위:</b> {position}위 | 총 {total_games}경기 중 {played}경기 ({remaining_games}경기 남음) | {won}승 {draw}무 {lost}패 | {points}점 (득실차 {gd_sign}{goal_diff}) | {playoff_msg}")
             message_parts.append("")
 
         # 1. Upcoming matches (today/tomorrow)
