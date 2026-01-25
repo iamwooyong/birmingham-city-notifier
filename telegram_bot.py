@@ -79,8 +79,9 @@ class TelegramNotifier:
             points = standing.get("points", 0)
             goal_diff = standing.get("goal_difference", 0)
             gd_sign = "+" if goal_diff > 0 else ""
+            remaining_games = 46 - played  # Championship has 46 games total
 
-            message_parts.append(f"📊 <b>리그 순위:</b> {position}위 | {played}경기 {won}승 {draw}무 {lost}패 | {points}점 (득실차 {gd_sign}{goal_diff})")
+            message_parts.append(f"📊 <b>리그 순위:</b> {position}위 | {played}경기 {won}승 {draw}무 {lost}패 | {points}점 (득실차 {gd_sign}{goal_diff}) | 남은경기 {remaining_games}경기")
             message_parts.append("")
 
         # 1. Upcoming matches (today/tomorrow)
