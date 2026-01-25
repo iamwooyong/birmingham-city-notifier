@@ -48,8 +48,7 @@ class TelegramNotifier:
     def format_match_notification(
         self,
         upcoming_matches: List[Dict],
-        this_week_matches: List[Dict],
-        next_week_matches: List[Dict],
+        future_matches: List[Dict],
         recent_results: List[Dict],
         team_name: str = "버밍엄 시티 FC"
     ) -> str:
@@ -58,8 +57,7 @@ class TelegramNotifier:
 
         Args:
             upcoming_matches: List of upcoming matches (today/tomorrow)
-            this_week_matches: List of matches this week
-            next_week_matches: List of matches next week
+            future_matches: List of future matches (next 3 matches)
             recent_results: List of recent match results (last 5 games)
             team_name: Team name to display
 
@@ -87,28 +85,10 @@ class TelegramNotifier:
         else:
             message_parts.append("오늘/내일 예정된 경기가 없습니다.\n")
 
-        # 2. This week matches
-        if this_week_matches:
-            message_parts.append("📆 <b>이번주 경기 일정:</b>")
-            for match in this_week_matches:
-                home = match.get("home_team", "Unknown")
-                away = match.get("away_team", "Unknown")
-                korea_time = match.get("korea_time", "Unknown")
-                uk_time = match.get("uk_time", "Unknown")
-
-                # Determine if Birmingham is home or away
-                is_home = "버밍엄" in home or "Birmingham" in home
-                location = "(홈)" if is_home else "(원정)"
-                opponent = away if is_home else home
-
-                message_parts.append(f"🇰🇷 {korea_time} / 🇬🇧 {uk_time}")
-                message_parts.append(f"vs {opponent} {location}")
-                message_parts.append("")
-
-        # 3. Next week matches
-        if next_week_matches:
-            message_parts.append("📆 <b>다음주 경기 일정:</b>")
-            for match in next_week_matches:
+        # 2. Future matches (next 3 matches)
+        if future_matches:
+            message_parts.append("📆 <b>다음 경기 일정 (향후 3경기):</b>")
+            for match in future_matches:
                 home = match.get("home_team", "Unknown")
                 away = match.get("away_team", "Unknown")
                 korea_time = match.get("korea_time", "Unknown")
@@ -150,7 +130,7 @@ class TelegramNotifier:
                 message_parts.append("")
 
         # If absolutely no matches at all
-        if not upcoming_matches and not this_week_matches and not next_week_matches and not recent_results:
+        if not upcoming_matches and not future_matches and not recent_results:
             message_parts.append("\n현재 예정된 경기 및 최근 결과가 없습니다.")
             message_parts.append("다음 경기 일정을 기다려주세요.")
 
@@ -159,8 +139,7 @@ class TelegramNotifier:
     def send_notification_sync(
         self,
         upcoming_matches: List[Dict],
-        this_week_matches: List[Dict],
-        next_week_matches: List[Dict],
+        future_matches: List[Dict],
         recent_results: List[Dict]
     ) -> bool:
         """
@@ -168,8 +147,7 @@ class TelegramNotifier:
 
         Args:
             upcoming_matches: List of upcoming matches
-            this_week_matches: List of this week matches
-            next_week_matches: List of next week matches
+            future_matches: List of future matches (next 3)
             recent_results: List of recent results
 
         Returns:
@@ -177,8 +155,7 @@ class TelegramNotifier:
         """
         message = self.format_match_notification(
             upcoming_matches,
-            this_week_matches,
-            next_week_matches,
+            future_matches,
             recent_results
         )
 
@@ -206,21 +183,24 @@ if __name__ == "__main__":
             }
         ]
 
-        test_this_week = [
+        test_future = [
             {
                 "home_team": "Birmingham City",
                 "away_team": "Norwich City",
                 "korea_time": "2026-01-29 04:45",
                 "uk_time": "2026-01-28 19:45"
-            }
-        ]
-
-        test_next_week = [
+            },
             {
                 "home_team": "Millwall",
                 "away_team": "Birmingham City",
                 "korea_time": "2026-02-02 00:00",
                 "uk_time": "2026-02-01 15:00"
+            },
+            {
+                "home_team": "Birmingham City",
+                "away_team": "Preston North End",
+                "korea_time": "2026-02-08 04:00",
+                "uk_time": "2026-02-07 19:00"
             }
         ]
 
@@ -246,8 +226,7 @@ if __name__ == "__main__":
         print("Sending test notification...")
         success = notifier.send_notification_sync(
             test_upcoming,
-            test_this_week,
-            test_next_week,
+            test_future,
             test_results
         )
 

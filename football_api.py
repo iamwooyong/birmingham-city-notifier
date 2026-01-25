@@ -104,25 +104,24 @@ class FootballAPIClient:
         sorted_matches = sorted(matches, key=lambda x: x.get("utcDate", ""), reverse=True)
         return sorted_matches[:limit]
 
-    def get_this_week_matches(self) -> List[Dict]:
+    def get_upcoming_future_matches(self, limit: int = 3) -> List[Dict]:
         """
-        Get matches for this week (until Sunday)
+        Get upcoming future matches (up to limit count)
+
+        Args:
+            limit: Maximum number of future matches to retrieve (default: 3)
 
         Returns:
-            List of match dictionaries for this week
+            List of upcoming match dictionaries (up to limit count)
         """
-        now = datetime.now()
-        # Calculate days until Sunday
-        days_until_sunday = (6 - now.weekday()) % 7
-        if days_until_sunday == 0:
-            days_until_sunday = 7  # If today is Sunday, get until next Sunday
-
-        date_from = now.strftime("%Y-%m-%d")
-        date_to = (now + timedelta(days=days_until_sunday)).strftime("%Y-%m-%d")
+        # Search for matches in the next 60 days to ensure we get enough scheduled matches
+        date_from = datetime.now().strftime("%Y-%m-%d")
+        date_to = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
 
         params = {
             "dateFrom": date_from,
-            "dateTo": date_to
+            "dateTo": date_to,
+            "status": "SCHEDULED,TIMED"  # Only get scheduled matches
         }
 
         data = self._make_request(f"teams/{self.team_id}/matches", params)
@@ -130,38 +129,10 @@ class FootballAPIClient:
         if not data or "matches" not in data:
             return []
 
-        return data["matches"]
-
-    def get_next_week_matches_only(self) -> List[Dict]:
-        """
-        Get matches for next week only (Monday to Sunday of next week)
-
-        Returns:
-            List of match dictionaries for next week
-        """
-        now = datetime.now()
-        # Calculate next Monday
-        days_until_next_monday = (7 - now.weekday()) % 7
-        if days_until_next_monday == 0:
-            days_until_next_monday = 7
-
-        next_monday = now + timedelta(days=days_until_next_monday)
-        next_sunday = next_monday + timedelta(days=6)
-
-        date_from = next_monday.strftime("%Y-%m-%d")
-        date_to = next_sunday.strftime("%Y-%m-%d")
-
-        params = {
-            "dateFrom": date_from,
-            "dateTo": date_to
-        }
-
-        data = self._make_request(f"teams/{self.team_id}/matches", params)
-
-        if not data or "matches" not in data:
-            return []
-
-        return data["matches"]
+        # Sort by date ascending and return the first 'limit' matches
+        matches = data["matches"]
+        sorted_matches = sorted(matches, key=lambda x: x.get("utcDate", ""))
+        return sorted_matches[:limit]
 
     @staticmethod
     def format_match_info(match: Dict) -> Dict:
@@ -247,16 +218,9 @@ if __name__ == "__main__":
             print(f"UK: {info['uk_time']} / KR: {info['korea_time']}")
             print(f"{info['home_team']} {info.get('home_score', 0)} - {info.get('away_score', 0)} {info['away_team']}\n")
 
-        print("=== This Week Matches ===")
-        this_week = client.get_this_week_matches()
-        for match in this_week:
-            info = client.format_match_info(match)
-            print(f"UK: {info['uk_time']} / KR: {info['korea_time']}")
-            print(f"{info['home_team']} vs {info['away_team']}\n")
-
-        print("=== Next Week Matches ===")
-        next_week = client.get_next_week_matches_only()
-        for match in next_week:
+        print("=== Upcoming Future Matches (Next 3) ===")
+        future_matches = client.get_upcoming_future_matches(limit=3)
+        for match in future_matches:
             info = client.format_match_info(match)
             print(f"UK: {info['uk_time']} / KR: {info['korea_time']}")
             print(f"{info['home_team']} vs {info['away_team']}\n")

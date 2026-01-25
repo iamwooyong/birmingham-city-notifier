@@ -47,15 +47,10 @@ def main():
         upcoming_matches = [api_client.format_match_info(m) for m in upcoming_raw]
         print(f"Found {len(upcoming_matches)} upcoming matches (today/tomorrow)")
 
-        # Get this week's matches
-        this_week_raw = api_client.get_this_week_matches()
-        this_week_matches = [api_client.format_match_info(m) for m in this_week_raw]
-        print(f"Found {len(this_week_matches)} matches this week")
-
-        # Get next week's matches
-        next_week_raw = api_client.get_next_week_matches_only()
-        next_week_matches = [api_client.format_match_info(m) for m in next_week_raw]
-        print(f"Found {len(next_week_matches)} matches next week")
+        # Get future matches (next 3 matches)
+        future_raw = api_client.get_upcoming_future_matches(limit=3)
+        future_matches = [api_client.format_match_info(m) for m in future_raw]
+        print(f"Found {len(future_matches)} future matches (next 3)")
 
         # Get recent results (last 5 games)
         recent_raw = api_client.get_recent_results(limit=5)
@@ -79,8 +74,7 @@ def main():
     try:
         success = telegram.send_notification_sync(
             upcoming_matches,
-            this_week_matches,
-            next_week_matches,
+            future_matches,
             recent_results
         )
 
