@@ -77,7 +77,11 @@ class TelegramNotifier:
                 uk_time = match.get("uk_time", "Unknown")
                 venue = match.get("venue", "Unknown")
 
-                message_parts.append(f"🇰🇷 한국: {korea_time} / 🇬🇧 영국: {uk_time}")
+                # Format time as mm-dd HH:MM (remove year)
+                korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
+                uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
+
+                message_parts.append(f"🇰🇷 한국: {korea_time_short} / 🇬🇧 영국: {uk_time_short}")
                 message_parts.append(f"{home} vs {away}")
                 if venue != "Unknown":
                     message_parts.append(f"장소: {venue}")
@@ -99,7 +103,11 @@ class TelegramNotifier:
                 location = "(홈)" if is_home else "(원정)"
                 opponent = away if is_home else home
 
-                message_parts.append(f"🇰🇷 {korea_time} / 🇬🇧 {uk_time}")
+                # Format time as mm-dd HH:MM (remove year)
+                korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
+                uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
+
+                message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
                 message_parts.append(f"vs {opponent} {location}")
                 message_parts.append("")
 
@@ -125,7 +133,11 @@ class TelegramNotifier:
                 else:
                     result_emoji = ""
 
-                message_parts.append(f"🇰🇷 {korea_time} / 🇬🇧 {uk_time}")
+                # Format time as mm-dd HH:MM (remove year)
+                korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
+                uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
+
+                message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
                 message_parts.append(f"{home} {home_score} - {away_score} {away} {result_emoji}")
                 message_parts.append("")
 
