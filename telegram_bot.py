@@ -77,8 +77,10 @@ class TelegramNotifier:
         Returns:
             Formatted message string
         """
-        today = datetime.now().strftime("%Y-%m-%d")
-        message_parts = [f"⚽ <b>{team_name} 경기 정보</b> ({today})\n"]
+        now = datetime.now()
+        weekday = self.WEEKDAYS_KR[now.weekday()]
+        today = now.strftime(f"%Y-%m-%d({weekday})")
+        message_parts = [f"⚽ <b>{team_name} 경기 일정</b> ({today})\n"]
 
         # Add league standing if available
         if standing:
