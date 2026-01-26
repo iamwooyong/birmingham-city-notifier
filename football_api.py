@@ -164,6 +164,31 @@ class FootballAPIClient:
 
         return birmingham_standing
 
+    def get_all_standings(self) -> Dict[int, int]:
+        """
+        Get all team standings in the Championship
+
+        Returns:
+            Dictionary mapping team_id to position
+        """
+        data = self._make_request("competitions/2016/standings")
+
+        if not data or "standings" not in data:
+            return {}
+
+        standings = {}
+        for standing_type in data["standings"]:
+            if standing_type.get("type") == "TOTAL":
+                table = standing_type.get("table", [])
+                for team in table:
+                    team_id = team.get("team", {}).get("id")
+                    position = team.get("position", 0)
+                    if team_id:
+                        standings[team_id] = position
+                break
+
+        return standings
+
     def get_upcoming_future_matches(self, limit: int = 3) -> List[Dict]:
         """
         Get upcoming future matches (up to limit count)
@@ -207,6 +232,8 @@ class FootballAPIClient:
         """
         home_team = match.get("homeTeam", {}).get("name", "Unknown")
         away_team = match.get("awayTeam", {}).get("name", "Unknown")
+        home_team_id = match.get("homeTeam", {}).get("id")
+        away_team_id = match.get("awayTeam", {}).get("id")
         match_date = match.get("utcDate", "")
         venue = match.get("venue", "Unknown")
         status = match.get("status", "SCHEDULED")
@@ -237,6 +264,8 @@ class FootballAPIClient:
         result = {
             "home_team": home_team,
             "away_team": away_team,
+            "home_team_id": home_team_id,
+            "away_team_id": away_team_id,
             "date": formatted_date,
             "uk_time": uk_time_str,
             "korea_time": korea_time_str,

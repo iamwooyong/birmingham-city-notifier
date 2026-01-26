@@ -62,6 +62,7 @@ class TelegramNotifier:
         future_matches: List[Dict],
         recent_results: List[Dict],
         standing: Dict = None,
+        all_standings: Dict[int, int] = None,
         team_name: str = "Birmingham City FC"
     ) -> str:
         """
@@ -72,11 +73,14 @@ class TelegramNotifier:
             future_matches: List of future matches (next 3 matches)
             recent_results: List of recent match results (last 5 games)
             standing: Team standing information
+            all_standings: Dictionary mapping team_id to position
             team_name: Team name to display
 
         Returns:
             Formatted message string
         """
+        if all_standings is None:
+            all_standings = {}
         now = datetime.now()
         weekday = self.WEEKDAYS_KR[now.weekday()]
         today = now.strftime(f"%Y-%m-%d({weekday})")
@@ -133,6 +137,8 @@ class TelegramNotifier:
             for match in future_matches:
                 home = match.get("home_team", "Unknown")
                 away = match.get("away_team", "Unknown")
+                home_team_id = match.get("home_team_id")
+                away_team_id = match.get("away_team_id")
                 korea_time = match.get("korea_time", "Unknown")
                 uk_time = match.get("uk_time", "Unknown")
 
@@ -140,6 +146,11 @@ class TelegramNotifier:
                 is_home = "버밍엄" in home or "Birmingham" in home
                 location = "(홈)" if is_home else "(원정)"
                 opponent = away if is_home else home
+                opponent_id = away_team_id if is_home else home_team_id
+
+                # Get opponent ranking
+                opponent_rank = all_standings.get(opponent_id, 0)
+                rank_str = f" (리그 {opponent_rank}위)" if opponent_rank > 0 else ""
 
                 # Calculate D-day
                 try:
@@ -160,7 +171,7 @@ class TelegramNotifier:
                 uk_time_short = self._format_datetime_with_weekday(uk_time)
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
-                message_parts.append(f"vs {opponent} {location} {d_day}")
+                message_parts.append(f"vs {opponent}{rank_str} {location} {d_day}")
                 message_parts.append("")
 
         # 4. Recent results (last 5 games)
@@ -215,7 +226,8 @@ class TelegramNotifier:
         upcoming_matches: List[Dict],
         future_matches: List[Dict],
         recent_results: List[Dict],
-        standing: Dict = None
+        standing: Dict = None,
+        all_standings: Dict[int, int] = None
     ) -> bool:
         """
         Synchronous wrapper for sending match notifications
@@ -225,6 +237,7 @@ class TelegramNotifier:
             future_matches: List of future matches (next 3)
             recent_results: List of recent results
             standing: Team standing information
+            all_standings: Dictionary mapping team_id to position
 
         Returns:
             True if notification was sent successfully
@@ -233,7 +246,8 @@ class TelegramNotifier:
             upcoming_matches,
             future_matches,
             recent_results,
-            standing
+            standing,
+            all_standings
         )
 
         # Run async function in sync context

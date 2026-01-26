@@ -54,6 +54,7 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Fetch match data
         standing = api_client.get_team_standing()
+        all_standings = api_client.get_all_standings()
         upcoming_raw = api_client.get_upcoming_matches(days_ahead=2)
         upcoming_matches = [api_client.format_match_info(m) for m in upcoming_raw]
         future_raw = api_client.get_upcoming_future_matches(limit=3)
@@ -66,7 +67,8 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             upcoming_matches,
             future_matches,
             recent_results,
-            standing
+            standing,
+            all_standings
         )
 
         # Delete loading message and send result

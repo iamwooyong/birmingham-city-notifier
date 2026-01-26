@@ -47,6 +47,10 @@ def main():
         if standing:
             print(f"Current standing: {standing['position']}위 (승{standing['won']} 무{standing['draw']} 패{standing['lost']}, {standing['points']}점)")
 
+        # Get all standings for opponent ranking
+        all_standings = api_client.get_all_standings()
+        print(f"Loaded standings for {len(all_standings)} teams")
+
         # Get upcoming matches (today and tomorrow)
         upcoming_raw = api_client.get_upcoming_matches(days_ahead=2)
         upcoming_matches = [api_client.format_match_info(m) for m in upcoming_raw]
@@ -81,7 +85,8 @@ def main():
             upcoming_matches,
             future_matches,
             recent_results,
-            standing
+            standing,
+            all_standings
         )
 
         if success:
