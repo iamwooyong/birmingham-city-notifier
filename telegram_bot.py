@@ -169,16 +169,16 @@ class TelegramNotifier:
                     if home_score > away_score:
                         result_text = "승 ✅"
                     elif home_score < away_score:
-                        result_text = "패 ❌"
+                        result_text = "패 💀"
                     else:
-                        result_text = "무 🟰"
+                        result_text = "무 🤝"
                 elif is_away:
                     if away_score > home_score:
                         result_text = "승 ✅"
                     elif away_score < home_score:
-                        result_text = "패 ❌"
+                        result_text = "패 💀"
                     else:
-                        result_text = "무 🟰"
+                        result_text = "무 🤝"
                 else:
                     result_text = ""
 
