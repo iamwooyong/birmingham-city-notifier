@@ -62,7 +62,7 @@ class TelegramNotifier:
         future_matches: List[Dict],
         recent_results: List[Dict],
         standing: Dict = None,
-        team_name: str = "버밍엄 시티 FC"
+        team_name: str = "Birmingham City FC"
     ) -> str:
         """
         Format match information into a notification message
