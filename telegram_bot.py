@@ -128,12 +128,26 @@ class TelegramNotifier:
                 location = "(홈)" if is_home else "(원정)"
                 opponent = away if is_home else home
 
+                # Calculate D-day
+                try:
+                    match_date = datetime.strptime(korea_time[:10], "%Y-%m-%d").date()
+                    today = datetime.now().date()
+                    days_left = (match_date - today).days
+                    if days_left == 0:
+                        d_day = "D-Day"
+                    elif days_left > 0:
+                        d_day = f"D-{days_left}"
+                    else:
+                        d_day = ""
+                except:
+                    d_day = ""
+
                 # Format time as mm-dd HH:MM (remove year)
                 korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
                 uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
-                message_parts.append(f"vs {opponent} {location}")
+                message_parts.append(f"vs {opponent} {location} {d_day}")
                 message_parts.append("")
 
         # 4. Recent results (last 5 games)
