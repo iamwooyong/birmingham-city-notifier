@@ -98,9 +98,9 @@ class TelegramNotifier:
 
             # Format playoff message
             if position <= 6:
-                playoff_msg = "플레이오프권 내"
+                playoff_msg = "⭐ 플레이오프권 내"
             else:
-                playoff_msg = f"PO(6위)까지 {points_to_playoff}점 필요"
+                playoff_msg = f"⭐ PO(6위)까지 {points_to_playoff}점 필요"
 
             message_parts.append(f"📊 <b>리그 순위:</b> {position}위 | 총 {total_games}경기 중 {played}경기 ({remaining_games}경기 남음) | {won}승 {draw}무 {lost}패 | {points}점 (득실차 {gd_sign}{goal_diff}) | {playoff_msg}")
             message_parts.append("")
