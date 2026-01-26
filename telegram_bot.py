@@ -12,6 +12,17 @@ from datetime import datetime
 class TelegramNotifier:
     """Telegram bot for sending match notifications"""
 
+    WEEKDAYS_KR = ["월", "화", "수", "목", "금", "토", "일"]
+
+    def _format_datetime_with_weekday(self, datetime_str: str) -> str:
+        """Format datetime string with Korean weekday: MM-DD(요일) HH:MM"""
+        try:
+            dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+            weekday = self.WEEKDAYS_KR[dt.weekday()]
+            return dt.strftime(f"%m-%d({weekday}) %H:%M")
+        except:
+            return datetime_str[5:] if len(datetime_str) > 5 else datetime_str
+
     def __init__(self, bot_token: str, chat_id: str):
         """
         Initialize Telegram notifier
@@ -102,9 +113,9 @@ class TelegramNotifier:
                 uk_time = match.get("uk_time", "Unknown")
                 venue = match.get("venue", "Unknown")
 
-                # Format time as mm-dd HH:MM (remove year)
-                korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
-                uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
+                # Format time with weekday
+                korea_time_short = self._format_datetime_with_weekday(korea_time)
+                uk_time_short = self._format_datetime_with_weekday(uk_time)
 
                 message_parts.append(f"🇰🇷 한국: {korea_time_short} / 🇬🇧 영국: {uk_time_short}")
                 message_parts.append(f"{home} vs {away}")
@@ -142,9 +153,9 @@ class TelegramNotifier:
                 except:
                     d_day = ""
 
-                # Format time as mm-dd HH:MM (remove year)
-                korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
-                uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
+                # Format time with weekday
+                korea_time_short = self._format_datetime_with_weekday(korea_time)
+                uk_time_short = self._format_datetime_with_weekday(uk_time)
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
                 message_parts.append(f"vs {opponent} {location} {d_day}")
@@ -182,9 +193,9 @@ class TelegramNotifier:
                 else:
                     result_text = ""
 
-                # Format time as mm-dd HH:MM (remove year)
-                korea_time_short = korea_time[5:] if len(korea_time) > 5 else korea_time
-                uk_time_short = uk_time[5:] if len(uk_time) > 5 else uk_time
+                # Format time with weekday
+                korea_time_short = self._format_datetime_with_weekday(korea_time)
+                uk_time_short = self._format_datetime_with_weekday(uk_time)
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
                 message_parts.append(f"{home} {home_score} - {away_score} {away} {result_text}")
