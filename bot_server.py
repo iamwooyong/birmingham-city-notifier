@@ -143,6 +143,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         elif callback_data == "standings":
             # League standings
             standing = api_client.get_team_standing()
+            logger.info(f"Standing data: {standing}")
             message = notifier.format_standings(standing)
 
         else:

@@ -414,6 +414,7 @@ class TelegramNotifier:
                 message_parts.append(f"⭐ PO(6위)까지 <b>{points_to_playoff}점</b> 필요")
         else:
             message_parts.append("순위 정보를 가져올 수 없습니다.")
+            message_parts.append("(API 응답이 없거나 팀을 찾을 수 없습니다)")
 
         return "\n".join(message_parts)
 
