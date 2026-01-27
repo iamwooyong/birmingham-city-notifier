@@ -234,6 +234,189 @@ class TelegramNotifier:
 
         return "\n".join(message_parts)
 
+    def format_future_matches(
+        self,
+        future_matches: List[Dict],
+        standing: Dict = None,
+        all_standings: Dict[int, int] = None
+    ) -> str:
+        """Format future matches only"""
+        if all_standings is None:
+            all_standings = {}
+
+        now = datetime.now()
+        weekday = self.WEEKDAYS_KR[now.weekday()]
+        today_str = now.strftime(f"%Y-%m-%d({weekday})")
+        message_parts = [f"📆 <b>향후 경기 일정</b> ({today_str})\n"]
+
+        # Add current standing summary
+        if standing:
+            position = standing.get("position", 0)
+            points = standing.get("points", 0)
+            message_parts.append(f"현재 순위: {position}위 ({points}점)\n")
+
+        if future_matches:
+            for match in future_matches:
+                home = match.get("home_team", "Unknown")
+                away = match.get("away_team", "Unknown")
+                home_team_id = match.get("home_team_id")
+                away_team_id = match.get("away_team_id")
+                korea_time = match.get("korea_time", "Unknown")
+                uk_time = match.get("uk_time", "Unknown")
+
+                is_home = "버밍엄" in home or "Birmingham" in home
+                location = "(홈)" if is_home else "(원정)"
+                opponent = away if is_home else home
+                opponent_id = away_team_id if is_home else home_team_id
+
+                opponent_rank = all_standings.get(opponent_id, 0)
+                rank_str = f" (리그 {opponent_rank}위)" if opponent_rank > 0 else ""
+
+                try:
+                    match_date = datetime.strptime(korea_time[:10], "%Y-%m-%d").date()
+                    today = datetime.now().date()
+                    days_left = (match_date - today).days
+                    if days_left == 0:
+                        d_day = "D-Day"
+                    elif days_left > 0:
+                        d_day = f"D-{days_left}"
+                    else:
+                        d_day = ""
+                except:
+                    d_day = ""
+
+                korea_time_short = self._format_datetime_with_weekday(korea_time)
+                uk_time_short = self._format_datetime_with_weekday(uk_time)
+
+                message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
+                message_parts.append(f"vs {opponent}{rank_str} {location} {d_day}")
+                message_parts.append("")
+        else:
+            message_parts.append("예정된 경기가 없습니다.")
+
+        return "\n".join(message_parts)
+
+    def format_recent_results(
+        self,
+        recent_results: List[Dict],
+        all_standings: Dict[int, int] = None
+    ) -> str:
+        """Format recent results only"""
+        if all_standings is None:
+            all_standings = {}
+
+        now = datetime.now()
+        weekday = self.WEEKDAYS_KR[now.weekday()]
+        today_str = now.strftime(f"%Y-%m-%d({weekday})")
+        message_parts = [f"📊 <b>최근 경기 결과</b> ({today_str})\n"]
+
+        if recent_results:
+            wins = draws = losses = 0
+            for match in recent_results:
+                home = match.get("home_team", "Unknown")
+                away = match.get("away_team", "Unknown")
+                home_team_id = match.get("home_team_id")
+                away_team_id = match.get("away_team_id")
+                korea_time = match.get("korea_time", "Unknown")
+                uk_time = match.get("uk_time", "Unknown")
+                home_score = match.get("home_score", 0)
+                away_score = match.get("away_score", 0)
+
+                is_home = "버밍엄" in home or "Birmingham" in home
+                is_away = "버밍엄" in away or "Birmingham" in away
+
+                opponent_id = away_team_id if is_home else home_team_id
+                opponent_rank = all_standings.get(opponent_id, 0)
+                rank_str = f"({opponent_rank}위)" if opponent_rank > 0 else ""
+
+                if is_home:
+                    if home_score > away_score:
+                        result_text = "승 ✅"
+                        wins += 1
+                    elif home_score < away_score:
+                        result_text = "패 💀"
+                        losses += 1
+                    else:
+                        result_text = "무 🤝"
+                        draws += 1
+                elif is_away:
+                    if away_score > home_score:
+                        result_text = "승 ✅"
+                        wins += 1
+                    elif away_score < home_score:
+                        result_text = "패 💀"
+                        losses += 1
+                    else:
+                        result_text = "무 🤝"
+                        draws += 1
+                else:
+                    result_text = ""
+
+                korea_time_short = self._format_datetime_with_weekday(korea_time)
+                uk_time_short = self._format_datetime_with_weekday(uk_time)
+
+                if is_home:
+                    display_line = f"{home} {home_score} - {away_score} {away}{rank_str} {result_text}"
+                else:
+                    display_line = f"{home}{rank_str} {home_score} - {away_score} {away} {result_text}"
+
+                message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
+                message_parts.append(display_line)
+                message_parts.append("")
+
+            # Add summary
+            message_parts.append(f"<b>최근 {len(recent_results)}경기:</b> {wins}승 {draws}무 {losses}패")
+        else:
+            message_parts.append("최근 경기 결과가 없습니다.")
+
+        return "\n".join(message_parts)
+
+    def format_standings(self, standing: Dict = None) -> str:
+        """Format league standings details"""
+        now = datetime.now()
+        weekday = self.WEEKDAYS_KR[now.weekday()]
+        today_str = now.strftime(f"%Y-%m-%d({weekday})")
+        message_parts = [f"🏆 <b>리그 순위 상세</b> ({today_str})\n"]
+
+        if standing:
+            position = standing.get("position", 0)
+            played = standing.get("played", 0)
+            won = standing.get("won", 0)
+            draw = standing.get("draw", 0)
+            lost = standing.get("lost", 0)
+            points = standing.get("points", 0)
+            goals_for = standing.get("goals_for", 0)
+            goals_against = standing.get("goals_against", 0)
+            goal_diff = standing.get("goal_difference", 0)
+            gd_sign = "+" if goal_diff > 0 else ""
+            total_games = 46
+            remaining_games = total_games - played
+            points_to_playoff = standing.get("points_to_playoff", 0)
+
+            message_parts.append(f"<b>현재 순위:</b> {position}위")
+            message_parts.append("")
+            message_parts.append(f"<b>경기:</b> {played}경기 / 총 {total_games}경기")
+            message_parts.append(f"<b>남은 경기:</b> {remaining_games}경기")
+            message_parts.append("")
+            message_parts.append(f"<b>성적:</b> {won}승 {draw}무 {lost}패")
+            message_parts.append(f"<b>승점:</b> {points}점")
+            message_parts.append("")
+            message_parts.append(f"<b>득점:</b> {goals_for}골")
+            message_parts.append(f"<b>실점:</b> {goals_against}골")
+            message_parts.append(f"<b>득실차:</b> {gd_sign}{goal_diff}")
+            message_parts.append("")
+
+            if position <= 2:
+                message_parts.append("🏆 <b>자동 승격권</b>")
+            elif position <= 6:
+                message_parts.append("⭐ <b>플레이오프권 내</b>")
+            else:
+                message_parts.append(f"⭐ PO(6위)까지 <b>{points_to_playoff}점</b> 필요")
+        else:
+            message_parts.append("순위 정보를 가져올 수 없습니다.")
+
+        return "\n".join(message_parts)
+
     def send_notification_sync(
         self,
         upcoming_matches: List[Dict],
