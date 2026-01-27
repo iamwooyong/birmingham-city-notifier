@@ -180,6 +180,8 @@ class TelegramNotifier:
             for match in recent_results:
                 home = match.get("home_team", "Unknown")
                 away = match.get("away_team", "Unknown")
+                home_team_id = match.get("home_team_id")
+                away_team_id = match.get("away_team_id")
                 korea_time = match.get("korea_time", "Unknown")
                 uk_time = match.get("uk_time", "Unknown")
                 home_score = match.get("home_score", 0)
@@ -188,6 +190,11 @@ class TelegramNotifier:
                 # Determine if Birmingham won, lost, or drew
                 is_home = "버밍엄" in home or "Birmingham" in home
                 is_away = "버밍엄" in away or "Birmingham" in away
+
+                # Get opponent ranking
+                opponent_id = away_team_id if is_home else home_team_id
+                opponent_rank = all_standings.get(opponent_id, 0)
+                rank_str = f"({opponent_rank}위)" if opponent_rank > 0 else ""
 
                 if is_home:
                     if home_score > away_score:
@@ -210,8 +217,14 @@ class TelegramNotifier:
                 korea_time_short = self._format_datetime_with_weekday(korea_time)
                 uk_time_short = self._format_datetime_with_weekday(uk_time)
 
+                # Format with opponent ranking
+                if is_home:
+                    display_line = f"{home} {home_score} - {away_score} {away}{rank_str} {result_text}"
+                else:
+                    display_line = f"{home}{rank_str} {home_score} - {away_score} {away} {result_text}"
+
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
-                message_parts.append(f"{home} {home_score} - {away_score} {away} {result_text}")
+                message_parts.append(display_line)
                 message_parts.append("")
 
         # If absolutely no matches at all
