@@ -141,10 +141,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             message = notifier.format_recent_results(recent_results, all_standings)
 
         elif callback_data == "standings":
-            # League standings
-            standing = api_client.get_team_standing()
-            logger.info(f"Standing data: {standing}")
-            message = notifier.format_standings(standing)
+            # Full league table
+            league_table = api_client.get_league_table()
+            logger.info(f"League table: {len(league_table)} teams")
+            message = notifier.format_standings(league_table, BIRMINGHAM_TEAM_ID)
 
         else:
             message = "알 수 없는 명령입니다."

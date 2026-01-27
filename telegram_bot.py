@@ -371,50 +371,49 @@ class TelegramNotifier:
 
         return "\n".join(message_parts)
 
-    def format_standings(self, standing: Dict = None) -> str:
-        """Format league standings details"""
+    def format_standings(self, league_table: List[Dict] = None, team_id: int = 332) -> str:
+        """Format full league table"""
         now = datetime.now()
         weekday = self.WEEKDAYS_KR[now.weekday()]
         today_str = now.strftime(f"%Y-%m-%d({weekday})")
-        message_parts = [f"🏆 <b>리그 순위 상세</b> ({today_str})\n"]
+        message_parts = [f"🏆 <b>EFL Championship 순위표</b>\n({today_str})\n"]
 
-        if standing:
-            position = standing.get("position", 0)
-            played = standing.get("played", 0)
-            won = standing.get("won", 0)
-            draw = standing.get("draw", 0)
-            lost = standing.get("lost", 0)
-            points = standing.get("points", 0)
-            goals_for = standing.get("goals_for", 0)
-            goals_against = standing.get("goals_against", 0)
-            goal_diff = standing.get("goal_difference", 0)
-            gd_sign = "+" if goal_diff > 0 else ""
-            total_games = 46
-            remaining_games = total_games - played
-            points_to_playoff = standing.get("points_to_playoff", 0)
+        if league_table:
+            message_parts.append("<pre>")
+            message_parts.append("순위 | 팀 | 경기 | 승점")
+            message_parts.append("─" * 25)
 
-            message_parts.append(f"<b>현재 순위:</b> {position}위")
-            message_parts.append("")
-            message_parts.append(f"<b>경기:</b> {played}경기 / 총 {total_games}경기")
-            message_parts.append(f"<b>남은 경기:</b> {remaining_games}경기")
-            message_parts.append("")
-            message_parts.append(f"<b>성적:</b> {won}승 {draw}무 {lost}패")
-            message_parts.append(f"<b>승점:</b> {points}점")
-            message_parts.append("")
-            message_parts.append(f"<b>득점:</b> {goals_for}골")
-            message_parts.append(f"<b>실점:</b> {goals_against}골")
-            message_parts.append(f"<b>득실차:</b> {gd_sign}{goal_diff}")
-            message_parts.append("")
+            for team in league_table:
+                pos = team.get("position", 0)
+                name = team.get("team_name", "Unknown")
+                played = team.get("played", 0)
+                points = team.get("points", 0)
+                tid = team.get("team_id")
 
-            if position <= 2:
-                message_parts.append("🏆 <b>자동 승격권</b>")
-            elif position <= 6:
-                message_parts.append("⭐ <b>플레이오프권 내</b>")
-            else:
-                message_parts.append(f"⭐ PO(6위)까지 <b>{points_to_playoff}점</b> 필요")
+                # Shorten team name
+                if len(name) > 12:
+                    name = name[:11] + "."
+
+                # Highlight Birmingham
+                if tid == team_id:
+                    line = f"<b>{pos:2d}  | {name:12s} | {played:2d} | {points:2d}</b> ⚽"
+                # Highlight promotion/playoff zones
+                elif pos <= 2:
+                    line = f"{pos:2d}  | {name:12s} | {played:2d} | {points:2d} 🏆"
+                elif pos <= 6:
+                    line = f"{pos:2d}  | {name:12s} | {played:2d} | {points:2d} ⭐"
+                elif pos >= 22:
+                    line = f"{pos:2d}  | {name:12s} | {played:2d} | {points:2d} ⬇️"
+                else:
+                    line = f"{pos:2d}  | {name:12s} | {played:2d} | {points:2d}"
+
+                message_parts.append(line)
+
+            message_parts.append("</pre>")
+            message_parts.append("")
+            message_parts.append("🏆 자동승격 | ⭐ 플레이오프 | ⬇️ 강등권")
         else:
-            message_parts.append("순위 정보를 가져올 수 없습니다.")
-            message_parts.append("(API 응답이 없거나 팀을 찾을 수 없습니다)")
+            message_parts.append("순위표를 가져올 수 없습니다.")
 
         return "\n".join(message_parts)
 

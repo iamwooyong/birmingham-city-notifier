@@ -189,6 +189,37 @@ class FootballAPIClient:
 
         return standings
 
+    def get_league_table(self) -> List[Dict]:
+        """
+        Get full league table with all team details
+
+        Returns:
+            List of team standings with full details
+        """
+        data = self._make_request("competitions/2016/standings")
+
+        if not data or "standings" not in data:
+            return []
+
+        table = []
+        for standing_type in data["standings"]:
+            if standing_type.get("type") == "TOTAL":
+                for team in standing_type.get("table", []):
+                    table.append({
+                        "position": team.get("position", 0),
+                        "team_name": team.get("team", {}).get("name", "Unknown"),
+                        "team_id": team.get("team", {}).get("id"),
+                        "played": team.get("playedGames", 0),
+                        "won": team.get("won", 0),
+                        "draw": team.get("draw", 0),
+                        "lost": team.get("lost", 0),
+                        "points": team.get("points", 0),
+                        "goal_difference": team.get("goalDifference", 0)
+                    })
+                break
+
+        return table
+
     def get_upcoming_future_matches(self, limit: int = 3) -> List[Dict]:
         """
         Get upcoming future matches (up to limit count)
