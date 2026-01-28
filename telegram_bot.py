@@ -228,15 +228,24 @@ class TelegramNotifier:
                 else:
                     result_text = ""
 
+                # Calculate D+day (days since match)
+                try:
+                    match_date = datetime.strptime(korea_time[:10], "%Y-%m-%d").date()
+                    today = datetime.now().date()
+                    days_ago = (today - match_date).days
+                    d_day = f"D+{days_ago}" if days_ago > 0 else "D-Day"
+                except:
+                    d_day = ""
+
                 # Format time with weekday
                 korea_time_short = self._format_datetime_with_weekday(korea_time)
                 uk_time_short = self._format_datetime_with_weekday(uk_time)
 
                 # Format with opponent ranking
                 if is_home:
-                    display_line = f"{home} {home_score} - {away_score} {away}{rank_str} {result_text}"
+                    display_line = f"{home} {home_score} - {away_score} {away}{rank_str} {result_text} {d_day}"
                 else:
-                    display_line = f"{home}{rank_str} {home_score} - {away_score} {away} {result_text}"
+                    display_line = f"{home}{rank_str} {home_score} - {away_score} {away} {result_text} {d_day}"
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
                 message_parts.append(display_line)
@@ -367,13 +376,22 @@ class TelegramNotifier:
                 else:
                     result_text = ""
 
+                # Calculate D+day (days since match)
+                try:
+                    match_date = datetime.strptime(korea_time[:10], "%Y-%m-%d").date()
+                    today = datetime.now().date()
+                    days_ago = (today - match_date).days
+                    d_day = f"D+{days_ago}" if days_ago > 0 else "D-Day"
+                except:
+                    d_day = ""
+
                 korea_time_short = self._format_datetime_with_weekday(korea_time)
                 uk_time_short = self._format_datetime_with_weekday(uk_time)
 
                 if is_home:
-                    display_line = f"{home} {home_score} - {away_score} {away}{rank_str} {result_text}"
+                    display_line = f"{home} {home_score} - {away_score} {away}{rank_str} {result_text} {d_day}"
                 else:
-                    display_line = f"{home}{rank_str} {home_score} - {away_score} {away} {result_text}"
+                    display_line = f"{home}{rank_str} {home_score} - {away_score} {away} {result_text} {d_day}"
 
                 message_parts.append(f"🇰🇷 {korea_time_short} / 🇬🇧 {uk_time_short}")
                 message_parts.append(display_line)
