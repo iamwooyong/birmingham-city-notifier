@@ -10,7 +10,9 @@ Commands:
 """
 
 import sys
+import os
 import logging
+import subprocess
 from datetime import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -40,6 +42,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize API client (reusable)
 api_client = FootballAPIClient(FOOTBALL_API_KEY, BIRMINGHAM_TEAM_ID)
+
+# Restart flag file path
+RESTART_FLAG_FILE = "/var/services/homes/admin/scripts/birmingham-city-notifier/.restart_flag"
 
 
 def get_menu_keyboard():
@@ -186,21 +191,79 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.message.reply_text(start_text, parse_mode='HTML', reply_markup=get_menu_keyboard())
 
 
+async def restart_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /restart command - pull latest code and restart bot (admin only)"""
+    chat_id = str(update.effective_chat.id)
+
+    # Check if user is admin
+    if chat_id != str(TELEGRAM_CHAT_ID):
+        logger.warning(f"Unauthorized /restart attempt from chat_id: {chat_id}")
+        await update.message.reply_text("⛔ 권한이 없습니다.", reply_markup=get_menu_keyboard())
+        return
+
+    logger.info(f"Restart command received from admin: {chat_id}")
+    await update.message.reply_text("🔄 봇을 업데이트하고 재시작합니다...", reply_markup=get_menu_keyboard())
+
+    try:
+        # Create restart flag file with chat_id
+        with open(RESTART_FLAG_FILE, "w") as f:
+            f.write(chat_id)
+
+        # Run update.sh script
+        script_path = "/var/services/homes/admin/scripts/birmingham-city-notifier/update.sh"
+        subprocess.Popen(
+            ["bash", script_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        logger.info("Update script started")
+    except Exception as e:
+        logger.error(f"Failed to run update script: {e}")
+        await update.message.reply_text(f"⚠️ 재시작 실패: {str(e)}", reply_markup=get_menu_keyboard())
+
+
+async def send_restart_success_message():
+    """Send success message if bot was restarted via /restart command"""
+    if os.path.exists(RESTART_FLAG_FILE):
+        try:
+            with open(RESTART_FLAG_FILE, "r") as f:
+                chat_id = f.read().strip()
+
+            # Delete flag file
+            os.remove(RESTART_FLAG_FILE)
+
+            # Send success message
+            from telegram import Bot
+            bot = Bot(token=TELEGRAM_BOT_TOKEN)
+            await bot.send_message(
+                chat_id=chat_id,
+                text="✅ 봇이 성공적으로 업데이트되고 재시작되었습니다!",
+                reply_markup=get_menu_keyboard()
+            )
+            logger.info(f"Restart success message sent to {chat_id}")
+        except Exception as e:
+            logger.error(f"Failed to send restart success message: {e}")
+
+
 def main() -> None:
     """Start the bot"""
     print(f"[{datetime.now()}] Starting Birmingham City FC Telegram Bot Server...")
 
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(
+        lambda app: send_restart_success_message()
+    ).build()
 
     # Add handlers
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("menu", menu_command))
     application.add_handler(CommandHandler("update", update_command))
+    application.add_handler(CommandHandler("restart", restart_command))
     application.add_handler(CallbackQueryHandler(button_callback))
 
     print("Bot is running. Press Ctrl+C to stop.")
-    print("Available commands: /start, /help, /menu, /update")
+    print("Available commands: /start, /help, /menu, /update, /restart (admin only)")
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 

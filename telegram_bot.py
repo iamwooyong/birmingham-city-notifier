@@ -3,9 +3,9 @@ Telegram Bot module for sending Birmingham City FC match notifications
 """
 
 import asyncio
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime
 
 
@@ -35,12 +35,26 @@ class TelegramNotifier:
         self.chat_id = chat_id
         self.bot = Bot(token=bot_token)
 
-    async def send_message(self, message: str) -> bool:
+    @staticmethod
+    def get_menu_keyboard() -> InlineKeyboardMarkup:
+        """Create inline keyboard with menu buttons"""
+        keyboard = [
+            [InlineKeyboardButton("📋 전체 정보", callback_data="all")],
+            [
+                InlineKeyboardButton("📆 향후 경기", callback_data="future"),
+                InlineKeyboardButton("📊 최근 결과", callback_data="recent")
+            ],
+            [InlineKeyboardButton("🏆 리그 순위표", callback_data="standings")]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    async def send_message(self, message: str, reply_markup: Optional[InlineKeyboardMarkup] = None) -> bool:
         """
         Send a message to the configured chat
 
         Args:
             message: Message text to send
+            reply_markup: Optional inline keyboard markup
 
         Returns:
             True if message was sent successfully, False otherwise
@@ -49,7 +63,8 @@ class TelegramNotifier:
             await self.bot.send_message(
                 chat_id=self.chat_id,
                 text=message,
-                parse_mode='HTML'
+                parse_mode='HTML',
+                reply_markup=reply_markup
             )
             return True
         except TelegramError as e:
@@ -446,8 +461,8 @@ class TelegramNotifier:
             all_standings
         )
 
-        # Run async function in sync context
-        return asyncio.run(self.send_message(message))
+        # Run async function in sync context with menu keyboard
+        return asyncio.run(self.send_message(message, self.get_menu_keyboard()))
 
 
 # Test the Telegram bot when run directly
