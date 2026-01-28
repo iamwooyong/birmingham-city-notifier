@@ -202,7 +202,7 @@ async def restart_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     logger.info(f"Restart command received from admin: {chat_id}")
-    await update.message.reply_text("🔄 봇을 업데이트하고 재시작합니다...", reply_markup=get_menu_keyboard())
+    await update.message.reply_text("🔄 봇을 업데이트하고 재시작합니다...")
 
     try:
         # Create restart flag file with chat_id
