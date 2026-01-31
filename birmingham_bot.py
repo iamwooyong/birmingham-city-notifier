@@ -2,6 +2,7 @@
 """
 Birmingham City FC Telegram Bot Server
 Listens for commands and sends match information on request
+Supports multiple users with individual notification settings
 
 Commands:
     /update - Get current match information
@@ -18,7 +19,7 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-from settings import load_settings, update_setting, toggle_setting
+from database import get_database
 
 try:
     from config import (
@@ -42,8 +43,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize API client (reusable)
+# Initialize API client and database
 api_client = FootballAPIClient(FOOTBALL_API_KEY, BIRMINGHAM_TEAM_ID)
+db = get_database()
 
 # Restart flag file path
 RESTART_FLAG_FILE = "/var/services/homes/admin/scripts/birmingham-city-notifier/.restart_flag"
@@ -63,15 +65,15 @@ def get_menu_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_notification_keyboard():
-    """Create notification settings keyboard"""
-    settings = load_settings()
+def get_notification_keyboard(chat_id: str):
+    """Create notification settings keyboard for specific user"""
+    user = db.get_or_create_user(chat_id)
 
-    morning_text = "🔔 아침 알림: 켜짐" if settings.get("morning_notification") else "🔕 아침 알림: 꺼짐"
-    morning_hour = settings.get("morning_notification_hour", 9)
-    reminder_minutes = settings.get("match_reminder_minutes", 30)
-    goal_text = "⚽ 골 알림: 켜짐" if settings.get("goal_notification") else "⚽ 골 알림: 꺼짐"
-    lineup_text = "📋 라인업 알림: 켜짐" if settings.get("lineup_notification") else "📋 라인업 알림: 꺼짐"
+    morning_text = "🔔 아침 알림: 켜짐" if user.get("morning_notification") else "🔕 아침 알림: 꺼짐"
+    morning_hour = user.get("morning_notification_hour", 9)
+    reminder_minutes = user.get("match_reminder_minutes", 30)
+    goal_text = "⚽ 골 알림: 켜짐" if user.get("goal_notification") else "⚽ 골 알림: 꺼짐"
+    lineup_text = "📋 라인업 알림: 켜짐" if user.get("lineup_notification") else "📋 라인업 알림: 꺼짐"
 
     keyboard = [
         [InlineKeyboardButton(morning_text, callback_data="toggle_morning")],
@@ -121,6 +123,10 @@ def get_reminder_keyboard():
 
 async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /menu command - show menu with buttons"""
+    chat_id = str(update.effective_chat.id)
+    username = update.effective_user.username
+    db.get_or_create_user(chat_id, username)
+
     await update.message.reply_text(
         "⚽ <b>Birmingham City FC</b>\n\n원하는 정보를 선택하세요:",
         parse_mode='HTML',
@@ -130,13 +136,15 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /update command - fetch and send all match information"""
-    chat_id = update.effective_chat.id
+    chat_id = str(update.effective_chat.id)
+    username = update.effective_user.username
+    db.get_or_create_user(chat_id, username)
     logger.info(f"Received /update command from chat_id: {chat_id}")
 
     loading_msg = await update.message.reply_text("⏳ 경기 정보를 가져오는 중...")
 
     try:
-        notifier = TelegramNotifier(TELEGRAM_BOT_TOKEN, str(chat_id))
+        notifier = TelegramNotifier(TELEGRAM_BOT_TOKEN, chat_id)
 
         standing = api_client.get_team_standing()
         all_standings = api_client.get_all_standings()
@@ -166,9 +174,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
 
-    chat_id = update.effective_chat.id
+    chat_id = str(update.effective_chat.id)
+    username = update.effective_user.username
     callback_data = query.data
     logger.info(f"Button pressed: {callback_data} from chat_id: {chat_id}")
+
+    # Ensure user exists
+    db.get_or_create_user(chat_id, username)
 
     try:
         # Notification settings callbacks (no API calls needed)
@@ -181,19 +193,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return
 
         elif callback_data == "notifications":
-            settings = load_settings()
             message = """<b>🔔 알림 설정</b>
 
 아래 버튼을 눌러 알림을 설정하세요."""
             await query.edit_message_text(
                 message,
                 parse_mode='HTML',
-                reply_markup=get_notification_keyboard()
+                reply_markup=get_notification_keyboard(chat_id)
             )
             return
 
         elif callback_data == "toggle_morning":
-            new_value = toggle_setting("morning_notification")
+            new_value = db.toggle_setting(chat_id, "morning_notification")
             status = "켜짐 ✅" if new_value else "꺼짐 ❌"
             message = f"""<b>🔔 알림 설정</b>
 
@@ -201,12 +212,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(
                 message,
                 parse_mode='HTML',
-                reply_markup=get_notification_keyboard()
+                reply_markup=get_notification_keyboard(chat_id)
             )
             return
 
         elif callback_data == "toggle_goal":
-            new_value = toggle_setting("goal_notification")
+            new_value = db.toggle_setting(chat_id, "goal_notification")
             status = "켜짐 ✅" if new_value else "꺼짐 ❌"
             message = f"""<b>🔔 알림 설정</b>
 
@@ -214,12 +225,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(
                 message,
                 parse_mode='HTML',
-                reply_markup=get_notification_keyboard()
+                reply_markup=get_notification_keyboard(chat_id)
             )
             return
 
         elif callback_data == "toggle_lineup":
-            new_value = toggle_setting("lineup_notification")
+            new_value = db.toggle_setting(chat_id, "lineup_notification")
             status = "켜짐 ✅" if new_value else "꺼짐 ❌"
             message = f"""<b>🔔 알림 설정</b>
 
@@ -227,7 +238,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(
                 message,
                 parse_mode='HTML',
-                reply_markup=get_notification_keyboard()
+                reply_markup=get_notification_keyboard(chat_id)
             )
             return
 
@@ -244,14 +255,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         elif callback_data.startswith("set_morning_hour_"):
             hour = int(callback_data.split("_")[3])
-            update_setting("morning_notification_hour", hour)
+            db.update_morning_notification_hour(chat_id, hour)
             message = f"""<b>🔔 알림 설정</b>
 
 아침 알림 시간이 {hour}시로 변경되었습니다."""
             await query.edit_message_text(
                 message,
                 parse_mode='HTML',
-                reply_markup=get_notification_keyboard()
+                reply_markup=get_notification_keyboard(chat_id)
             )
             return
 
@@ -268,7 +279,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         elif callback_data.startswith("set_reminder_"):
             minutes = int(callback_data.split("_")[2])
-            update_setting("match_reminder_minutes", minutes)
+            db.update_match_reminder(chat_id, minutes)
             if minutes == 0:
                 status_text = "경기 알림이 꺼졌습니다."
             else:
@@ -279,14 +290,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(
                 message,
                 parse_mode='HTML',
-                reply_markup=get_notification_keyboard()
+                reply_markup=get_notification_keyboard(chat_id)
             )
             return
 
         # API calls for match data
         await query.edit_message_text("⏳ 정보를 가져오는 중...")
 
-        notifier = TelegramNotifier(TELEGRAM_BOT_TOKEN, str(chat_id))
+        notifier = TelegramNotifier(TELEGRAM_BOT_TOKEN, chat_id)
         all_standings = api_client.get_all_standings()
 
         if callback_data == "all":
@@ -337,6 +348,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /help command - show available commands"""
+    chat_id = str(update.effective_chat.id)
+    username = update.effective_user.username
+    db.get_or_create_user(chat_id, username)
+
     help_text = """⚽ <b>Birmingham City FC 봇</b>
 
 <b>명령어:</b>
@@ -356,6 +371,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /start command"""
+    chat_id = str(update.effective_chat.id)
+    username = update.effective_user.username
+    db.get_or_create_user(chat_id, username)
+
     start_text = """⚽ <b>Birmingham City FC 알리미</b>에 오신 것을 환영합니다!
 
 아래 버튼을 눌러 원하는 정보를 확인하세요."""
