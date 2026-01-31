@@ -16,12 +16,12 @@ git pull
 
 # Kill existing bot process
 echo "[2/3] Stopping existing bot..."
-pkill -f "python3 bot_server.py" 2>/dev/null || echo "No existing bot process found"
+pkill -f "python3 birmingham_bot.py" 2>/dev/null || echo "No existing bot process found"
 sleep 1
 
 # Start bot
 echo "[3/3] Starting bot..."
-nohup /usr/bin/python3 bot_server.py >> "$LOG_FILE" 2>&1 &
+nohup /usr/bin/python3 birmingham_bot.py >> "$LOG_FILE" 2>&1 &
 
 echo "=== Done! Bot is running ==="
 echo "Check logs: tail -f $LOG_FILE"
