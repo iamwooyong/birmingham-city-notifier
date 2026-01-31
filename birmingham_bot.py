@@ -18,6 +18,8 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
+from settings import load_settings, update_setting, toggle_setting
+
 try:
     from config import (
         FOOTBALL_API_KEY,
@@ -55,7 +57,64 @@ def get_menu_keyboard():
             InlineKeyboardButton("📆 향후 경기", callback_data="future"),
             InlineKeyboardButton("📊 최근 결과", callback_data="recent")
         ],
-        [InlineKeyboardButton("🏆 리그 순위표", callback_data="standings")]
+        [InlineKeyboardButton("🏆 리그 순위표", callback_data="standings")],
+        [InlineKeyboardButton("🔔 알림 설정", callback_data="notifications")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_notification_keyboard():
+    """Create notification settings keyboard"""
+    settings = load_settings()
+
+    morning_text = "🔔 아침 알림: 켜짐" if settings.get("morning_notification") else "🔕 아침 알림: 꺼짐"
+    morning_hour = settings.get("morning_notification_hour", 9)
+    reminder_minutes = settings.get("match_reminder_minutes", 30)
+    goal_text = "⚽ 골 알림: 켜짐" if settings.get("goal_notification") else "⚽ 골 알림: 꺼짐"
+    lineup_text = "📋 라인업 알림: 켜짐" if settings.get("lineup_notification") else "📋 라인업 알림: 꺼짐"
+
+    keyboard = [
+        [InlineKeyboardButton(morning_text, callback_data="toggle_morning")],
+        [InlineKeyboardButton(f"🕐 아침 알림 시간: {morning_hour}시", callback_data="morning_hour_settings")],
+        [InlineKeyboardButton(f"⏰ 경기 알림: {reminder_minutes}분 전" if reminder_minutes > 0 else "⏰ 경기 알림: 꺼짐", callback_data="reminder_settings")],
+        [InlineKeyboardButton(goal_text, callback_data="toggle_goal")],
+        [InlineKeyboardButton(lineup_text, callback_data="toggle_lineup")],
+        [InlineKeyboardButton("🔙 메뉴", callback_data="main_menu")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_morning_hour_keyboard():
+    """Create morning hour selection keyboard"""
+    keyboard = [
+        [
+            InlineKeyboardButton("7시", callback_data="set_morning_hour_7"),
+            InlineKeyboardButton("8시", callback_data="set_morning_hour_8"),
+            InlineKeyboardButton("9시", callback_data="set_morning_hour_9")
+        ],
+        [
+            InlineKeyboardButton("10시", callback_data="set_morning_hour_10"),
+            InlineKeyboardButton("11시", callback_data="set_morning_hour_11")
+        ],
+        [InlineKeyboardButton("🔙 알림 설정", callback_data="notifications")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_reminder_keyboard():
+    """Create match reminder selection keyboard"""
+    keyboard = [
+        [
+            InlineKeyboardButton("5분 전", callback_data="set_reminder_5"),
+            InlineKeyboardButton("10분 전", callback_data="set_reminder_10"),
+            InlineKeyboardButton("15분 전", callback_data="set_reminder_15")
+        ],
+        [
+            InlineKeyboardButton("30분 전", callback_data="set_reminder_30"),
+            InlineKeyboardButton("60분 전", callback_data="set_reminder_60"),
+            InlineKeyboardButton("끄기", callback_data="set_reminder_0")
+        ],
+        [InlineKeyboardButton("🔙 알림 설정", callback_data="notifications")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -111,10 +170,122 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     callback_data = query.data
     logger.info(f"Button pressed: {callback_data} from chat_id: {chat_id}")
 
-    # Edit message to show loading
-    await query.edit_message_text("⏳ 정보를 가져오는 중...")
-
     try:
+        # Notification settings callbacks (no API calls needed)
+        if callback_data == "main_menu":
+            await query.edit_message_text(
+                "⚽ <b>Birmingham City FC</b>\n\n원하는 정보를 선택하세요:",
+                parse_mode='HTML',
+                reply_markup=get_menu_keyboard()
+            )
+            return
+
+        elif callback_data == "notifications":
+            settings = load_settings()
+            message = """<b>🔔 알림 설정</b>
+
+아래 버튼을 눌러 알림을 설정하세요."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_notification_keyboard()
+            )
+            return
+
+        elif callback_data == "toggle_morning":
+            new_value = toggle_setting("morning_notification")
+            status = "켜짐 ✅" if new_value else "꺼짐 ❌"
+            message = f"""<b>🔔 알림 설정</b>
+
+아침 알림이 {status}으로 변경되었습니다."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_notification_keyboard()
+            )
+            return
+
+        elif callback_data == "toggle_goal":
+            new_value = toggle_setting("goal_notification")
+            status = "켜짐 ✅" if new_value else "꺼짐 ❌"
+            message = f"""<b>🔔 알림 설정</b>
+
+골 알림이 {status}으로 변경되었습니다."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_notification_keyboard()
+            )
+            return
+
+        elif callback_data == "toggle_lineup":
+            new_value = toggle_setting("lineup_notification")
+            status = "켜짐 ✅" if new_value else "꺼짐 ❌"
+            message = f"""<b>🔔 알림 설정</b>
+
+라인업 알림이 {status}으로 변경되었습니다."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_notification_keyboard()
+            )
+            return
+
+        elif callback_data == "morning_hour_settings":
+            message = """<b>🕐 아침 알림 시간 설정</b>
+
+몇 시에 아침 알림을 받을지 선택하세요."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_morning_hour_keyboard()
+            )
+            return
+
+        elif callback_data.startswith("set_morning_hour_"):
+            hour = int(callback_data.split("_")[3])
+            update_setting("morning_notification_hour", hour)
+            message = f"""<b>🔔 알림 설정</b>
+
+아침 알림 시간이 {hour}시로 변경되었습니다."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_notification_keyboard()
+            )
+            return
+
+        elif callback_data == "reminder_settings":
+            message = """<b>⏰ 경기 알림 시간 설정</b>
+
+경기 시작 몇 분 전에 알림을 받을지 선택하세요."""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_reminder_keyboard()
+            )
+            return
+
+        elif callback_data.startswith("set_reminder_"):
+            minutes = int(callback_data.split("_")[2])
+            update_setting("match_reminder_minutes", minutes)
+            if minutes == 0:
+                status_text = "경기 알림이 꺼졌습니다."
+            else:
+                status_text = f"경기 시작 {minutes}분 전에 알림을 보내드립니다."
+            message = f"""<b>🔔 알림 설정</b>
+
+{status_text}"""
+            await query.edit_message_text(
+                message,
+                parse_mode='HTML',
+                reply_markup=get_notification_keyboard()
+            )
+            return
+
+        # API calls for match data
+        await query.edit_message_text("⏳ 정보를 가져오는 중...")
+
         notifier = TelegramNotifier(TELEGRAM_BOT_TOKEN, str(chat_id))
         all_standings = api_client.get_all_standings()
 
@@ -177,7 +348,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 📋 전체 정보 - 모든 경기 정보
 📆 향후 경기 - 다음 5경기 일정
 📊 최근 결과 - 최근 5경기 결과
-🏆 리그 순위표 - 현재 순위 상세"""
+🏆 리그 순위표 - 현재 순위 상세
+🔔 알림 설정 - 알림 켜기/끄기"""
 
     await update.message.reply_text(help_text, parse_mode='HTML', reply_markup=get_menu_keyboard())
 

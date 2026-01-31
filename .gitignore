@@ -32,6 +32,9 @@ config.py
 *.log
 logs/
 
+# Data files (settings)
+data/
+
 # IDE
 .vscode/
 .idea/
