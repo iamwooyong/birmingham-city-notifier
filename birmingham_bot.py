@@ -20,6 +20,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 from database import get_database
+from scheduler import get_scheduler
 
 try:
     from config import (
@@ -35,6 +36,9 @@ except ImportError:
 
 from football_api import FootballAPIClient
 from telegram_bot import TelegramNotifier
+
+# Initialize scheduler
+scheduler = get_scheduler(FOOTBALL_API_KEY)
 
 # Enable logging
 logging.basicConfig(
@@ -440,6 +444,10 @@ async def send_restart_success_message():
 def main() -> None:
     """Start the bot"""
     print(f"[{datetime.now()}] Starting Birmingham City FC Telegram Bot Server...")
+
+    # Start the scheduler for notifications
+    scheduler.start()
+    print("Notification scheduler started")
 
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(
         lambda app: send_restart_success_message()

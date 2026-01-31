@@ -220,6 +220,62 @@ class FootballAPIClient:
 
         return table
 
+    def get_live_matches(self) -> List[Dict]:
+        """
+        Get live matches for Birmingham City
+
+        Returns:
+            List of live match dictionaries
+        """
+        params = {
+            "status": "IN_PLAY,PAUSED,LIVE"
+        }
+
+        data = self._make_request(f"teams/{self.team_id}/matches", params)
+
+        if not data or "matches" not in data:
+            return []
+
+        return data["matches"]
+
+    def get_today_matches(self) -> List[Dict]:
+        """
+        Get today's matches for Birmingham City
+
+        Returns:
+            List of today's match dictionaries
+        """
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        params = {
+            "dateFrom": today,
+            "dateTo": today
+        }
+
+        data = self._make_request(f"teams/{self.team_id}/matches", params)
+
+        if not data or "matches" not in data:
+            return []
+
+        return data["matches"]
+
+    def get_match_details(self, match_id: int) -> Optional[Dict]:
+        """
+        Get detailed information about a specific match including lineups
+
+        Args:
+            match_id: Match ID
+
+        Returns:
+            Match details dictionary or None
+        """
+        data = self._make_request(f"matches/{match_id}")
+
+        if not data:
+            return None
+
+        return data
+
     def get_upcoming_future_matches(self, limit: int = 3) -> List[Dict]:
         """
         Get upcoming future matches (up to limit count)
